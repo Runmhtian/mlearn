@@ -21,6 +21,7 @@ def create_kdtree(X,y):
     if len(X) == 0:
         return
     split = np.argmax(np.var(X, axis=0))  # 获取方差最大的列标
+    # print(np.var(X, axis=0))
     data_list = X.tolist()
     # X与y一一对应，一起排序
     for x,category in zip(data_list,y):
@@ -31,10 +32,11 @@ def create_kdtree(X,y):
         y.append(x.pop())
     split_vector_index=int(len(data_list) / 2)
     split_vector = data_list[split_vector_index] # 数据分割
+    # print(split_vector)
     root = KD_Node(split_vector, split)
     root.category=y[split_vector_index]
     X=np.array(data_list)
-    root.left = create_kdtree(X[0:split_vector_index],y[0:split_vector_index])
+    root.left = create_kdtree(X[:split_vector_index],y[:split_vector_index])
     root.right = create_kdtree(X[split_vector_index + 1:],y[split_vector_index + 1:])
     return root
 
@@ -64,7 +66,7 @@ def search(trace_list,pos,data):
 #             min_dist=dist
 #         else:
 #             dist = norm(np.array(node.vector) - data)
-#             if dist<=min_dist:  # 向trace_list 添加另一子树
+#             if abs(data[node.split]-node.vector[node.split])<=min_dist:  # 向trace_list 添加另一子树
 #                 nearest_node = node
 #                 min_dist=dist
 #                 if data[node.split]<node.vector[node.split]:
@@ -78,6 +80,7 @@ def search(trace_list,pos,data):
 '''
 kd-tree  k最近邻搜索
 给定一个构建于一个样本集的 kd 树，寻找距离点 p 最近的 k 个样本。
+
 设 L为一个有 k 个空位的列表，用于保存已搜寻到的最近点。
 步骤1  根据 p 的坐标值和每个节点的切分向下搜索，记录寻找的路径到栈X中。
 步骤2  弹出栈一个节点，直到栈为空，返回L。
@@ -89,7 +92,7 @@ kd-tree  k最近邻搜索
 	距离 p 最远的距离，在当前节点的另一子树上执行步骤1
 
 '''
-def Knearest(k,root,data,metric):
+def Knearest(k,root,data,metric):  # 欧氏距离
     if type(data)==list:
         data=np.array(data)
     trace_list=[]   # 记录路径
@@ -126,6 +129,9 @@ def Knearest(k,root,data,metric):
                     pos=node.right if data[node.split]<node.vector[node.split] else node.left
                     search(trace_list,pos,data)
     return k_node
+
+
+
 
 
 
