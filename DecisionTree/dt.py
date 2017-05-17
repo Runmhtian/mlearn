@@ -2,7 +2,9 @@
 from collections import Counter,defaultdict
 from math import log
 import numpy as np
-
+'''
+实现一个简易版的决策树
+'''
 class DT_node:
     def __init__(self,f_index):
         self.f_index=f_index
@@ -33,8 +35,8 @@ class DecisionTree:
     def __init__(self,algo='id3'):
         self.algo='id3'
 
-    def creat_tree(self,X,y):
-        # print('-------')
+    def creat_tree(self,X,y,f_index_l):
+
         if len(X)==0:  # 特征向量为空
             return DT_label_node(label=Counter(y).most_common(1)[0][0])
         y_label=np.unique(y)
@@ -42,7 +44,6 @@ class DecisionTree:
         if len(y_label)==1:  # 树下标签一致
             return DT_label_node(label=y_label[0])
         n, f_num = X.shape
-
         flag=True  # 特征值都一样，提前结束
         for x in X:
             l=np.equal(x,X[0])
@@ -55,12 +56,11 @@ class DecisionTree:
         max_entropy=0
         index=None
         max_f_value_2_list=None
-        # print(X)
-        # print(y)
+
         for i in range(f_num):
             # 特征值离散
             f_values,f_indexs,f_counts=np.unique(X[:,i],return_inverse=True,return_counts=True)
-            # print(f_values,f_indexs)
+
             f_value_2_p=dict()
             en=0
             for f_value,f_count in zip(f_values,f_counts):
@@ -68,8 +68,7 @@ class DecisionTree:
             f_value_2_list=defaultdict(list)
             for j,f_index in enumerate(f_indexs):
                 f_value_2_list[f_values[f_index]].append(j)
-            # print(i)
-            # print(f_value_2_list)
+
             for f_value,f_list in f_value_2_list.items():
                 templist=[]
                 for j in f_list:
@@ -78,35 +77,60 @@ class DecisionTree:
             # print(en)
             if en>=max_entropy:
                 index=i
+                f_index=f_index_l[index]
                 max_entropy=en
                 max_f_value_2_list=f_value_2_list
-        root=DT_node(f_index=index)
-        # print(index)
-        # print(max_f_value_2_list)
+        root=DT_node(f_index=f_index)
+
         for f_value, f_list in max_f_value_2_list.items():
-            # print(f_value)
-            # print(find_array(X,f_list))
+
             if f_num==1:
                 X_new=[]
+                f_index_l=[]
             else:
                 X_new=np.delete(find_array(X,f_list),index,axis=1)
+                f_new_index_l=[]
+                for i in range(len(f_index_l)):
+                    if i!=index:
+                        f_new_index_l.append(f_index_l[i])
             y_new=find_array(y,f_list)
-            root.sub_node_d[f_value]=self.creat_tree(X_new,y_new)
+            # print(y_new)
+            root.sub_node_d[f_value]=self.creat_tree(X_new,y_new,f_new_index_l)
         return root
 
     def fit(self,X,y):
         self.X=X
         self.y=y
-        self.root=self.creat_tree(X,y)
+        self.f_index_l=[i for i in range(X.shape[1])]
+        self.root=self.creat_tree(X,y,self.f_index_l)
+
+    def search(self,root,x):
+        pos=root
+        while not isinstance(pos,DT_label_node):
+            value=x[pos.f_index]
+            pos=pos.sub_node_d.get(value,None)
+            if pos==None:
+                raise RuntimeError('%s,%d 在训练集中不存在'%(str(x),f_index))
+        return pos.label
+
 
     def predict(self,X):
-        pass
+        X=np.atleast_2d(X)
+        for x in X:
+            label=self.search(self.root,x)
+            print(label)
+
 
 if __name__ == '__main__':
     y = np.array([1, 0, 1, 0])
     X = np.array([[1, 2, 4, 0, 2], [2, 1, 4, 0, 3], [0, 3, 1, 1, 3], [1, 2, 3, 1, 2]])
     dt=DecisionTree()
-    root=dt.creat_tree(X,y)
-    print(root.f_index)
-    for i,j in root.sub_node_d.items():
-        print(i,j)
+    dt.fit(X,y)
+    # print(dt.root.f_index)
+    # for i,j in dt.root.sub_node_d.items():
+    #     print(i,j)
+    # node=dt.root.sub_node_d[3]
+    # print(node.f_index)
+    # for i,j in node.sub_node_d.items():
+    #     print(i,j)
+    dt.predict([2,2,4,0,3])
