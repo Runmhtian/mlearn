@@ -3,7 +3,7 @@ from collections import Counter,defaultdict
 from math import log
 import numpy as np
 '''
-实现一个简易版的决策树
+实现一个简易版的决策树(id3,c4.5)
 '''
 class DT_node:
     def __init__(self,f_index):
@@ -14,7 +14,7 @@ class DT_label_node:
     def __init__(self,label):
         self.label=label
 
-def cal_entropy(y):
+def cal_entropy(y):  # 计算熵
     y=np.atleast_1d(y)
     entropy=0
     y_values,y_counts=np.unique(y,return_counts=True)
@@ -24,19 +24,27 @@ def cal_entropy(y):
     return -entropy
 
 
-def find_array(narray,l):
+def find_array(narray,l):  # 功能函数，依据l中的下标取narray中的数据
     templist=[]
     for i in l:
         templist.append(narray[i])
     return np.array(templist)
-# ID3
+
+
 
 class DecisionTree:
     def __init__(self,algo='id3'):
+        '''
+        algo=id3
+        algo=c4.5
+        :param algo: 
+        '''
         self.algo='id3'
 
     def creat_tree(self,X,y,f_index_l):
+        # print(f_index_l)
 
+        # 递归结束条件
         if len(X)==0:  # 特征向量为空
             return DT_label_node(label=Counter(y).most_common(1)[0][0])
         y_label=np.unique(y)
@@ -52,11 +60,14 @@ class DecisionTree:
                 break
         if flag:
             return DT_label_node(label=Counter(y).most_common(1)[0][0])
+
+        # # 计算总信息量
         y_entropy=cal_entropy(y)
-        max_entropy=0
+        # print('总信息量为%f'%y_entropy)
+        # 计算每个特征的信息量
+        max_gain=0
         index=None
         max_f_value_2_list=None
-
         for i in range(f_num):
             # 特征值离散
             f_values,f_indexs,f_counts=np.unique(X[:,i],return_inverse=True,return_counts=True)
@@ -68,25 +79,32 @@ class DecisionTree:
             f_value_2_list=defaultdict(list)
             for j,f_index in enumerate(f_indexs):
                 f_value_2_list[f_values[f_index]].append(j)
-
+            # print(f_value_2_list)
             for f_value,f_list in f_value_2_list.items():
                 templist=[]
                 for j in f_list:
                     templist.append(y[j])
                 en+=f_value_2_p[f_value]*cal_entropy(templist)
             # print(en)
-            if en>=max_entropy:
+            gain=y_entropy-en
+
+            if self.algo=='c4.5':
+                splitinfo=0
+                for f_p in f_value_2_p.values():
+                    splitinfo+=f_p*log(splitinfo,2)
+                splitinfo=-splitinfo
+                gain=gain/splitinfo
+            # print(gain)
+            if gain>=max_gain:
                 index=i
-                f_index=f_index_l[index]
-                max_entropy=en
+                max_gain=gain
                 max_f_value_2_list=f_value_2_list
-        root=DT_node(f_index=f_index)
-
+        f_index = f_index_l[index]
+        root=DT_node(f_index)
         for f_value, f_list in max_f_value_2_list.items():
-
             if f_num==1:
                 X_new=[]
-                f_index_l=[]
+                f_new_index_l=[]
             else:
                 X_new=np.delete(find_array(X,f_list),index,axis=1)
                 f_new_index_l=[]
@@ -102,6 +120,7 @@ class DecisionTree:
         self.X=X
         self.y=y
         self.f_index_l=[i for i in range(X.shape[1])]
+        # print(self.f_index_l)
         self.root=self.creat_tree(X,y,self.f_index_l)
 
     def search(self,root,x):
@@ -110,7 +129,7 @@ class DecisionTree:
             value=x[pos.f_index]
             pos=pos.sub_node_d.get(value,None)
             if pos==None:
-                raise RuntimeError('%s,%d 在训练集中不存在'%(str(x),f_index))
+                raise RuntimeError('%s,%d 在训练集中不存在'%(str(x),pos.f_index))
         return pos.label
 
 
@@ -126,11 +145,11 @@ if __name__ == '__main__':
     X = np.array([[1, 2, 4, 0, 2], [2, 1, 4, 0, 3], [0, 3, 1, 1, 3], [1, 2, 3, 1, 2]])
     dt=DecisionTree()
     dt.fit(X,y)
-    # print(dt.root.f_index)
-    # for i,j in dt.root.sub_node_d.items():
-    #     print(i,j)
+    print(dt.root.f_index)
+    for i,j in dt.root.sub_node_d.items():
+        print(i,j)
     # node=dt.root.sub_node_d[3]
     # print(node.f_index)
     # for i,j in node.sub_node_d.items():
     #     print(i,j)
-    dt.predict([2,2,4,0,3])
+    dt.predict([2,1,4,0,3])
