@@ -238,7 +238,7 @@ svc = SklearnHelper(clf=svm.SVC, seed=SEED, params=svc_params)
 
 '''
 OUT OF PREDICTION
-oof
+oop
 将多个分类器的预测结果作为训练集和测试集
 列为每个分类器预测结果   训练集用NFOLD个分类器产生一列，测试集NFOLD次结果的平均值/中位数产生一列
 行为每个训练样本或者测试样本
@@ -295,6 +295,17 @@ clf_stack = xgb.XGBClassifier(
  objective= 'binary:logistic',
  scale_pos_weight=1)
 clf_stack = clf_stack.fit(X_train, y)
+
+'''
+结果调优
+1，特征选择与处理
+2，out of prediction 选择分类器（个数，参数，那些分类器），oof规则
+3，最终分类器选择，参数
+'''
+from sklearn.model_selection import cross_val_score
+scores = cross_val_score(clf_stack, X_train, y, cv=5)
+print(scores)
+
 stack_pred = clf_stack.predict(X_test)
 
 submit = pd.DataFrame({'PassengerId' : test.loc[:,'PassengerId'],
